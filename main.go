@@ -11,6 +11,7 @@ import (
 	"github.com/m-bromo/go-auth-template/internal/repository"
 	"github.com/m-bromo/go-auth-template/internal/service"
 	"github.com/m-bromo/go-auth-template/internal/web/handler"
+	"github.com/m-bromo/go-auth-template/internal/web/middleware"
 	"github.com/m-bromo/go-auth-template/internal/web/server"
 )
 
@@ -32,11 +33,16 @@ func main() {
 	querier := sqlc.New(db)
 	userRepository := repository.NewUserRepository(querier)
 	authService := service.NewAuthService(userRepository)
+	userService := service.NewUserService(userRepository)
 	jwtService := service.NewJwtService(cfg)
+	authMiddleware := middleware.NewAuthMiddleware(jwtService)
 	authHandler := handler.NewAuthHandler(authService, jwtService)
+	userHandler := handler.NewUserHandler(userService)
 
 	srv.POST("/auth/register", authHandler.RegisterUser)
 	srv.POST("/auth/login", authHandler.Login)
+
+	srv.GET("/user/profile", userHandler.GetProfile, authMiddleware.Authenticate)
 
 	if err := srv.Run(fmt.Sprintf("%s:%s", cfg.API.Host, cfg.API.Port)); err != nil {
 		log.Fatal(err)

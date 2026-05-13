@@ -1,0 +1,48 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+	apierrors "github.com/m-bromo/go-auth-template/internal/api_errors"
+	"github.com/m-bromo/go-auth-template/internal/domain"
+	"github.com/m-bromo/go-auth-template/internal/repository"
+)
+
+var (
+	ErrUserNotFound = errors.New("the user was not found in database")
+)
+
+type UserService interface {
+	GetProfile(ctx context.Context, id string) (*domain.User, error)
+}
+
+type userService struct {
+	userRepository repository.UserRepository
+}
+
+func NewUserService(userRepository repository.UserRepository) UserService {
+	return &userService{
+		userRepository: userRepository,
+	}
+}
+
+func (s *userService) GetProfile(ctx context.Context, id string) (*domain.User, error) {
+	uuid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("ger profile: %w", apierrors.NewInternalServerError(err.Error()))
+	}
+
+	user, err := s.userRepository.GetByID(ctx, uuid)
+	if err != nil {
+		return nil, fmt.Errorf("get profile: %w", apierrors.NewInternalServerError(err.Error()))
+	}
+
+	if user == nil {
+		return nil, fmt.Errorf("get profile: %w", apierrors.NewNotFoundError(ErrUserNotRegistered.Error()))
+	}
+
+	return user, nil
+}

@@ -29,6 +29,24 @@ func (q *Queries) GetByEmail(ctx context.Context, email string) (User, error) {
 	return i, err
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, email, password, username
+FROM users u
+WHERE u.id = $1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Password,
+		&i.Username,
+	)
+	return i, err
+}
+
 const saveUser = `-- name: SaveUser :exec
 INSERT INTO users (
     id, email, password, username

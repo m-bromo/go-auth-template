@@ -3,13 +3,16 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 
+	"github.com/google/uuid"
 	"github.com/m-bromo/go-auth-template/internal/domain"
 	"github.com/m-bromo/go-auth-template/internal/infra/database/sqlc"
 )
 
 type UserRepository interface {
 	Save(ctx context.Context, user *domain.User) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 }
 
@@ -32,10 +35,28 @@ func (r *userRepository) Save(ctx context.Context, user *domain.User) error {
 	})
 }
 
+func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	user, err := r.querier.GetUserByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &domain.User{
+		ID:       user.ID,
+		Email:    user.Email,
+		Password: user.Password,
+		Username: user.Password,
+	}, nil
+}
+
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	user, err := r.querier.GetByEmail(ctx, email)
 	if err != nil {
-		if err != sql.ErrNoRows {
+		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 

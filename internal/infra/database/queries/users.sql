@@ -9,3 +9,8 @@ INSERT INTO users (
 SELECT *
 FROM users u 
 WHERE u.email = $1;
+
+-- name: GetUserByID :one
+SELECT *
+FROM users u
+WHERE u.id = $1;
