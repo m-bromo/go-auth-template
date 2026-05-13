@@ -24,14 +24,19 @@ func HandleError(w http.ResponseWriter, err error) {
 
 	if errors.As(err, &validationErr) {
 		apiErr = apierrors.NewValidationError(validationErr)
-	} else {
-		var ok bool
-		apiErr, ok = err.(*apierrors.ApiErr)
-		if !ok {
-			apiErr = apierrors.NewInternalServerError("an unexpected error has ocurred")
-		}
+		slog.Warn("failed to validate", "error", apiErr.Err)
+		HandleJSON(w, apiErr.Code, apiErr)
+		return
 	}
 
+	if errors.As(err, &apiErr) {
+		slog.Warn("client error", "error", apiErr.Err)
+		HandleJSON(w, apiErr.Code, apiErr)
+		return
+	}
+
+	apiErr = apierrors.NewInternalServerError("an unexpecter error has ocurred")
 	HandleJSON(w, apiErr.Code, apiErr)
 	slog.Error(err.Error())
+
 }

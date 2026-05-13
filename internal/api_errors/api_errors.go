@@ -9,7 +9,6 @@ import (
 type ApiErr struct {
 	Message string   `json:"message"`
 	Err     string   `json:"error"`
-	Path    string   `json:"path"`
 	Code    int      `json:"code"`
 	Causes  []Causes `json:"causes,omitempty"`
 }
