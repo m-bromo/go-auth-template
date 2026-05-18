@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,6 +15,7 @@ import (
 var (
 	ErrInvalidSigningMethod = errors.New("the token signing method is invalid")
 	ErrInvalidClaims        = errors.New("the token claims are invalid")
+	ErrTokenNotProvided     = errors.New("token string was not provided")
 )
 
 type JwtService interface {
@@ -41,27 +43,33 @@ func (s *jwtService) GenerateAccessToken(userID uuid.UUID) (string, error) {
 
 	tokenString, err := token.SignedString([]byte(s.cfg.Jwt.PrivateKey))
 	if err != nil {
-		return "", fmt.Errorf("generate access token: %w", err)
+		return "", fmt.Errorf("signing access token: %w", err)
 	}
 
 	return tokenString, nil
 }
 
-func (s *jwtService) ValidateAccessToken(tokenString string) (*jwt.RegisteredClaims, error) {
+func (s *jwtService) ValidateAccessToken(bearerToken string) (*jwt.RegisteredClaims, error) {
+	tokenString := strings.TrimPrefix(bearerToken, "Bearer ")
+
+	if tokenString == "" {
+		return nil, fmt.Errorf("verifiyng token string format: %w", apierrors.NewUnauthorizedError("failed to validadate token format", ErrTokenNotProvided))
+	}
+
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("validate token: %w", apierrors.NewUnauthorizedError("failed to validate signing method", ErrInvalidSigningMethod))
+			return nil, fmt.Errorf("verifying signing method: %w", apierrors.NewUnauthorizedError("failed to validate signing method", ErrInvalidSigningMethod))
 		}
 
 		return []byte(s.cfg.Jwt.PrivateKey), nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("validate token: %w", apierrors.NewUnauthorizedError("failed to parse token", err))
+		return nil, fmt.Errorf("parsing token with claims: %w", apierrors.NewUnauthorizedError("failed to parse token", err))
 	}
 
 	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	if !ok || !token.Valid {
-		return nil, fmt.Errorf("validate token : %w", apierrors.NewUnauthorizedError("failed to validate claims", ErrInvalidClaims))
+		return nil, fmt.Errorf("validating token claims: %w", apierrors.NewUnauthorizedError("failed to validate claims", ErrInvalidClaims))
 	}
 
 	return claims, nil

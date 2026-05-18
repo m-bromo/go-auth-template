@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 
-	apierrors "github.com/m-bromo/go-auth-template/internal/api_errors"
 	"github.com/m-bromo/go-auth-template/internal/service"
 	"github.com/m-bromo/go-auth-template/internal/web/handler"
 )
@@ -33,13 +31,8 @@ func NewAuthMiddleware(jwtService service.JwtService) AuthMiddleware {
 
 func (s *authMiddleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bearerToken := r.Header.Get("Authorization")
-		if bearerToken == "" {
-			handler.HandleError(w, apierrors.NewUnauthorizedError("failed to get authorization token", ErrTokenNotProvided))
-			return
-		}
+		token := r.Header.Get("Authorization")
 
-		token := strings.TrimPrefix(bearerToken, "Bearer ")
 		claims, err := s.jwtService.ValidateAccessToken(token)
 		if err != nil {
 			handler.HandleError(w, err)

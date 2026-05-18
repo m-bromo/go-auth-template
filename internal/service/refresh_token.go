@@ -32,7 +32,7 @@ func (s *refreshTokenService) GenerateRefreshToken(ctx context.Context, userID u
 	}
 
 	if err := s.refreshTokenRepository.Save(ctx, &refreshToken); err != nil {
-		return nil, fmt.Errorf("generate token :%w", err)
+		return nil, fmt.Errorf("saving refresh token to repository: %w", err)
 	}
 
 	return &refreshToken, nil
@@ -41,15 +41,15 @@ func (s *refreshTokenService) GenerateRefreshToken(ctx context.Context, userID u
 func (s *refreshTokenService) Refresh(ctx context.Context, tokenID string) (*domain.RefreshToken, error) {
 	userID, err := s.refreshTokenRepository.Get(ctx, uuid.MustParse(tokenID))
 	if err != nil {
-		return nil, fmt.Errorf("generate token :%w", err)
+		return nil, fmt.Errorf("fetching refresh token from repository: %w", err)
 	}
 
 	if userID == "" {
-		return nil, fmt.Errorf("refresh: %w", clienterrors.NewUnauthorizedError("token not found or expired", err))
+		return nil, fmt.Errorf("validating refresh token existence: %w", clienterrors.NewUnauthorizedError("token not found or expired", err))
 	}
 
 	if err := s.refreshTokenRepository.Delete(ctx, uuid.MustParse(tokenID)); err != nil {
-		return nil, fmt.Errorf("refresh token: %w", err)
+		return nil, fmt.Errorf("deleting old refresh token: %w", err)
 	}
 
 	newToken := domain.RefreshToken{
@@ -58,7 +58,7 @@ func (s *refreshTokenService) Refresh(ctx context.Context, tokenID string) (*dom
 	}
 
 	if err := s.refreshTokenRepository.Save(ctx, &newToken); err != nil {
-		return nil, fmt.Errorf("refresh: %w", err)
+		return nil, fmt.Errorf("saving new refresh token to repository: %w", err)
 	}
 
 	return &newToken, nil
